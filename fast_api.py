@@ -6,8 +6,12 @@ import pandas as pd
 from derma_base import DermaInput, PredictionResult
 
 app = FastAPI()
+
 MODEL_PATH = 'trained_model.pkl'
-regressor = pickle.load(MODEL_PATH)
+
+# Perbaikan: buka file sebelum load pickle
+with open(MODEL_PATH, 'rb') as file:
+    regressor = pickle.load(file)
 
 @app.get("/")
 async def root():
@@ -16,7 +20,6 @@ async def root():
 @app.post('/predict', response_model=PredictionResult)
 def predict(data: DermaInput):
     input_data_dict = data.dict()
-
     date = input_data_dict['date']
     quarter = input_data_dict['quarter']
     department = input_data_dict['department']
@@ -32,7 +35,7 @@ def predict(data: DermaInput):
     no_of_style_change = input_data_dict['no_of_style_change']
     no_of_workers = input_data_dict['no_of_workers']
 
-    input_df = pd.DataFrame([[
+    input_df = pd.DataFrame([[ 
         date, quarter, department, day, team, targeted_productivity,
         smv, wip, over_time, incentive, idle_time, idle_men,
         no_of_style_change, no_of_workers
