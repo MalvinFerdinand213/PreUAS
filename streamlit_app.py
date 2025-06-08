@@ -1,61 +1,45 @@
 import streamlit as st
 import pandas as pd
 import pickle
-import sklearn
 
-def load_model(filename):
-        with open(filename, 'rb') as file:
-            model = pickle.load(file)
-        return model
+# Load model
+with open('trained_model.pkl', 'rb') as f:
+    model = pickle.load(f)
 
+st.title("Prediksi Produktivitas Pekerja Garmen")
 
-def predict_with_model(model, user_input_df):
-    prediction = model.predict(user_input_df)
-    return prediction[0]
+st.markdown("Masukkan detail produksi di bawah ini untuk memprediksi actual productivity:")
 
-st.set_page_config(layout="centered")
-st.write("Group 2")
+# Input Form
+with st.form("prediction_form"):
+    date = st.date_input("Tanggal").strftime('%Y-%m-%d')
+    quarter = st.selectbox("Quarter", [1, 2, 3, 4])
+    department = st.selectbox("Departemen", ['sewing', 'finishing'])
+    day = st.selectbox("Hari", ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Saturday', 'Sunday'])
+    team = st.number_input("Team", min_value=1, max_value=100, value=1)
+    targeted_productivity = st.slider("Targeted Productivity", 0.0, 1.0, 0.75)
+    smv = st.number_input("SMV", min_value=0.0)
+    wip = st.number_input("WIP", min_value=0)
+    over_time = st.number_input("Over Time (menit)", min_value=0)
+    incentive = st.number_input("Incentive", min_value=0.0)
+    idle_time = st.number_input("Idle Time", min_value=0.0)
+    idle_men = st.number_input("Idle Men", min_value=0)
+    no_of_style_change = st.number_input("Style Changes", min_value=0)
+    no_of_workers = st.number_input("Jumlah Pekerja", min_value=1)
 
-def main():
-    st.title("Garment Worker Productivity Prediction")
-    st.info("Predicting the Actual Productivity of Garment Workers")
-    st.subheader("Please Input the Data:")
+    submit = st.form_submit_button("Prediksi")
 
-    department = st.selectbox("Department", ["sewing", "finishing"])
-    team = st.slider("Team Number", 1, 12, value=1)
-    targeted_productivity = st.slider("Targeted Productivity", 0.0, 1.0, value=0.6, step=0.01)
-    smv = st.slider("Standard Minute Value (SMV)", 0.0, 100.0, value=20.0, step=0.1)
-    wip = st.slider("Work in Progress (WIP)", 0.0, 25000.0, value=0.0, step=100.0)
-    over_time = st.slider("Over Time (minutes)", 0, 30000, value=3000, step=60)
-    incentive = st.slider("Incentive (BDT)", 0, 4000, value=30, step=10)
-    idle_time = st.slider("Idle Time (minutes)", 0.0, 500.0, value=0.0, step=0.1)
-    idle_men = st.slider("Idle Men", 0, 50, value=0, step=1)
-    no_of_style_change = st.slider("Number of Style Changes", 0, 3, value=0, step=1)
-    no_of_workers = st.slider("Number of Workers", 1.0, 100.0, value=25.0, step=0.5)
-    month = st.slider("Month", 1, 3, value=1, step=1)
+# Prediksi
+if submit:
+    input_data = pd.DataFrame([[
+        date, quarter, department, day, team, targeted_productivity,
+        smv, wip, over_time, incentive, idle_time, idle_men,
+        no_of_style_change, no_of_workers
+    ]], columns=[
+        'date', 'quarter', 'department', 'day', 'team', 'targeted_productivity',
+        'smv', 'wip', 'over_time', 'incentive', 'idle_time', 'idle_men',
+        'no_of_style_change', 'no_of_workers'
+    ])
 
-    user_input_df = pd.DataFrame([{
-        "department": department,
-        "team": int(team),
-        "targeted_productivity": targeted_productivity,
-        "smv": smv,
-        "wip": wip,
-        "over_time": int(over_time),
-        "incentive": incentive,
-        "idle_time": idle_time,
-        "idle_men": idle_men,
-        "no_of_style_change": int(no_of_style_change),
-        "no_of_workers": no_of_workers,
-        "month": int(month),
-    }])
-
-    model_pipeline = load_model("trained_model.pkl")
-
-    if model_pipeline is not None:
-        if st.button("Predict Productivity"):
-            prediction = predict_with_model(model_pipeline, user_input_df)
-            st.success(f"Predicted Actual Productivity: **{prediction:.4f}**")
-            st.write("*(A higher value indicates higher productivity.)*")
-
-if __name__ == "__main__":
-    main()
+    prediction = model.predict(input_data)
+    st.success(f"Prediksi Produktivitas Aktual: *{prediction[0]:.4f}*")
