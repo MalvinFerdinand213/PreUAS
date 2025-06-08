@@ -20,7 +20,7 @@ class DataHandler:
 
     def load_data(self):
         self.data = pd.read_csv(self.file_path)
-        
+
     def create_input_output(self, target_column):
         self.output_df = self.data[target_column]
         self.input_df = self.data.drop(target_column, axis=1)
@@ -53,7 +53,7 @@ class DateFeatureTransformer(BaseEstimator, TransformerMixin):
         X_transformed['date'] = pd.to_datetime(X_transformed['date'])
         X_transformed['day'] = X_transformed['date'].dt.day
         X_transformed['month'] = X_transformed['date'].dt.month
-        
+
         columns_to_drop = ['date', 'quarter']
         if 'year' in X_transformed.columns:
             columns_to_drop.append('year')
@@ -83,17 +83,17 @@ class ModelHandler:
             ('date_features', DateFeatureTransformer()),
         ])
 
-        numerical_features_final = [
+        numerical_features = [
             'team', 'targeted_productivity', 'smv', 'wip', 'over_time',
             'incentive', 'idle_time', 'idle_men', 'no_of_style_change', 'no_of_workers',
             'day', 'month'
         ]
-        categorical_features_final = ['department']
+        categorical_features = ['department']
 
         final_feature_transformer = ColumnTransformer(
             transformers=[
-                ('num', Pipeline(steps=[('scaler', MinMaxScaler())]), numerical_features_final),
-                ('cat', Pipeline(steps=[('onehot', OneHotEncoder(drop='first', handle_unknown='ignore'))]), categorical_features_final)
+                ('num', Pipeline(steps=[('scaler', MinMaxScaler())]), numerical_features),
+                ('cat', Pipeline(steps=[('onehot', OneHotEncoder(drop='first', handle_unknown='ignore'))]), categorical_features)
             ],
             remainder='drop'
         )
@@ -105,15 +105,16 @@ class ModelHandler:
         ])
 
     def train_model(self):
-        if self.best_model:
-            pass
-        elif self.model_pipeline:
+        if self.model_pipeline:
             self.model_pipeline.fit(self.x_train, self.y_train)
             self.best_model = self.model_pipeline
 
     def evaluate_model(self):
+        if self.best_model is None:
+            raise NotFittedError("Model belum dilatih. Jalankan train_model() terlebih dahulu.")
+
         predictions = self.best_model.predict(self.x_test)
-        
+
         mse = mean_squared_error(self.y_test, predictions)
         r2 = r2_score(self.y_test, predictions)
         mae = mean_absolute_error(self.y_test, predictions)
@@ -127,15 +128,19 @@ class ModelHandler:
         return r2
 
     def makePrediction(self):
+        if self.best_model is None:
+            raise NotFittedError("Model belum dilatih.")
         self.y_predict = self.best_model.predict(self.x_test)
 
     def createReport(self):
+        if self.y_predict is None:
+            raise NotFittedError("Belum ada prediksi yang dibuat.")
         mse = mean_squared_error(self.y_test, self.y_predict)
         r2 = r2_score(self.y_test, self.y_predict)
         mae = mean_absolute_error(self.y_test, self.y_predict)
         rmse = np.sqrt(mse)
 
-        print('--- Final Regression Report ---')
+        print('\n--- Final Regression Report ---')
         print(f"MSE: {mse:.8f}")
         print(f"R²: {r2:.8f}")
         print(f"MAE: {mae:.8f}")
@@ -156,19 +161,19 @@ class ModelHandler:
             n_jobs=-1,
             verbose=0
         )
-        
         grid_search.fit(self.x_train, self.y_train)
 
-        print("Tuned Hyperparameters :", grid_search.best_params_)
-        print("Best Cross-Validation Score (negative MSE) :", grid_search.best_score_)
-        
+        print("\nTuned Hyperparameters:", grid_search.best_params_)
+        print("Best Cross-Validation Score (neg MSE):", grid_search.best_score_)
+
         self.best_model = grid_search.best_estimator_
 
     def save_model_to_file(self, filename):
         with open(filename, 'wb') as file:
-                pickle.dump(self.best_model, file)
+            pickle.dump(self.best_model, file)
 
 
+# === MAIN EXECUTION ===
 FILE_PATH = 'garments_worker_productivity.csv'
 TARGET_COL = 'actual_productivity'
 OUTPUT_MODEL = 'trained_model.pkl'
@@ -182,15 +187,19 @@ model_handler.split_data()
 model_handler.create_pipeline()
 
 # Pre-Tuning
+print("\n== Training Before Tuning ==")
 model_handler.train_model()
 model_handler.makePrediction()
 model_handler.evaluate_model()
 model_handler.createReport()
 
 # Post-Tuning
+print("\n== Training After Tuning ==")
 model_handler.tuningParameter()
 model_handler.makePrediction()
 model_handler.evaluate_model()
 model_handler.createReport()
 
+# Save final model
 model_handler.save_model_to_file(OUTPUT_MODEL)
+print(f"\nModel berhasil disimpan ke file: {OUTPUT_MODEL}")
