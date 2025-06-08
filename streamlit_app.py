@@ -1,10 +1,4 @@
 import streamlit as st
-
-st.title('🎈 App Name')
-
-st.write('Hello world!')
-
-import streamlit as st
 import pandas as pd
 import pickle
 
