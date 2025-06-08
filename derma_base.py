@@ -1,4 +1,19 @@
 from pydantic import BaseModel
+import joblib
+import numpy as np
+
+try:
+    model = joblib.load("trained_model.pkl")
+except Exception as e:
+    model = None
+    print(f"Error loading model: {e}")
+
+def predict_productivity(idle_men, style_changes, num_workers, month):
+    if model is None:
+        raise ValueError("Model belum dimuat.")
+    
+    X = np.array([[idle_men, style_changes, num_workers, month]])
+    return model.predict(X)[0]
 
 class DermaInput(BaseModel):
     date: str
