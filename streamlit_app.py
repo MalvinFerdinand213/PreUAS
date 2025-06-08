@@ -1,6 +1,21 @@
 import streamlit as st
 import pandas as pd
 import pickle
+from derma_base import predict_productivity
+
+st.title("Prediksi Produktivitas Pabrik")
+
+idle_men = st.slider("Idle Men", 0.0, 500.0, 0.0)
+style_changes = st.slider("Number of Style Changes", 0, 50, 0)
+num_workers = st.slider("Number of Workers", 1, 100, 25)
+month = st.slider("Month", 1, 12, 6)
+
+if st.button("Predict"):
+    try:
+        result = predict_productivity(idle_men, style_changes, num_workers, month)
+        st.success(f"Hasil prediksi produktivitas: {result:.2f}")
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
 
 # Load model
 with open('trained_model.pkl', 'rb') as f:
