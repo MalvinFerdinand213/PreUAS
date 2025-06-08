@@ -64,7 +64,7 @@ def main():
 
     # Load the model
     with open("trained_model.pkl", "wb") as f:
-    pickle.dump(trained_model, f)
+        pickle.dump(trained_model, f)
 
     # Prediction button
     if model_pipeline is not None:
