@@ -1,10 +1,10 @@
 import streamlit as st
 import pandas as pd
-import pickle
-from derma_base import predict_productivity
+from derma_base import predict_productivity, model
 
 st.title("Prediksi Produktivitas Pabrik")
 
+# --- Bagian Slider sederhana untuk prediksi cepat ---
 idle_men = st.slider("Idle Men", 0.0, 500.0, 0.0)
 style_changes = st.slider("Number of Style Changes", 0, 50, 0)
 num_workers = st.slider("Number of Workers", 1, 100, 25)
@@ -17,12 +17,8 @@ if st.button("Predict"):
     except Exception as e:
         st.error(f"Error loading model: {e}")
 
-# Load model
-with open('trained_model.pkl', 'rb') as f:
-    model = pickle.load(f)
-
+# --- Form lengkap untuk prediksi model utama ---
 st.title("Prediksi Produktivitas Pekerja Garmen")
-
 st.markdown("Masukkan detail produksi di bawah ini untuk memprediksi actual productivity:")
 
 # Input Form
@@ -44,17 +40,22 @@ with st.form("prediction_form"):
 
     submit = st.form_submit_button("Prediksi")
 
-# Prediksi
 if submit:
-    input_data = pd.DataFrame([[
-        date, quarter, department, day, team, targeted_productivity,
-        smv, wip, over_time, incentive, idle_time, idle_men,
-        no_of_style_change, no_of_workers
-    ]], columns=[
-        'date', 'quarter', 'department', 'day', 'team', 'targeted_productivity',
-        'smv', 'wip', 'over_time', 'incentive', 'idle_time', 'idle_men',
-        'no_of_style_change', 'no_of_workers'
-    ])
+    if model is None:
+        st.error("Model belum dimuat.")
+    else:
+        input_data = pd.DataFrame([[
+            date, quarter, department, day, team, targeted_productivity,
+            smv, wip, over_time, incentive, idle_time, idle_men,
+            no_of_style_change, no_of_workers
+        ]], columns=[
+            'date', 'quarter', 'department', 'day', 'team', 'targeted_productivity',
+            'smv', 'wip', 'over_time', 'incentive', 'idle_time', 'idle_men',
+            'no_of_style_change', 'no_of_workers'
+        ])
 
-    prediction = model.predict(input_data)
-    st.success(f"Prediksi Produktivitas Aktual: *{prediction[0]:.4f}*")
+        try:
+            prediction = model.predict(input_data)
+            st.success(f"Prediksi Produktivitas Aktual: {prediction[0]:.4f}")
+        except Exception as e:
+            st.error(f"Gagal melakukan prediksi: {e}")
